@@ -40,7 +40,7 @@ class PoolFuzzTest(DesignateV2Test):
     def tearDown(self):
         super(PoolFuzzTest, self).tearDown()
         if self.pool_id:
-            resp = self.client.delete_pool(self.pool_id)
+            resp, body = self.client.delete_pool(self.pool_id)
             self.assertEqual(resp.status, 204)
 
     def _create_pool(self, pool_model, user='admin'):
@@ -64,11 +64,12 @@ class PoolFuzzTest(DesignateV2Test):
     def test_create_pool_fuzz_header(self, parameter, fuzz_type, payload):
         test_model = datagen.random_pool_data()
         headers = {parameter: payload.encode('utf-8')}
-        result, exception = fuzzer.verify_exception(
+        result = fuzzer.verify_tempest_exception(
             self.client.post_pool, fuzz_type, test_model, headers=headers)
-        self.assertTrue(result)
-        if exception:
-            self.assertNotIn(exception.resp.status, range(500, 600))
+        self.assertTrue(result['status'])
+        self.assertNotIn(result['resp'].status, range(500, 600))
+        if result['resp'].status == 201:
+            self.pool_id = result['model'].id
 
     @utils.parameterized(fuzzer.get_param_datasets(
         pool_params, ['junk', 'sqli', 'xss', 'rce']
@@ -76,11 +77,12 @@ class PoolFuzzTest(DesignateV2Test):
     def test_create_pool_fuzz_param(self, parameter, fuzz_type, payload):
         test_model = datagen.random_pool_data()
         test_model.__dict__[parameter] = payload
-        result, exception = fuzzer.verify_exception(
+        result = fuzzer.verify_tempest_exception(
             self.client.post_pool, fuzz_type, test_model)
-        self.assertTrue(result)
-        if exception:
-            self.assertNotIn(exception.resp.status, range(500, 600))
+        self.assertTrue(result['status'])
+        self.assertNotIn(result['resp'].status, range(500, 600))
+        if result['resp'].status == 201:
+            self.pool_id = result['model'].id
 
     @utils.parameterized(fuzzer.get_datasets(
         ['junk', 'sqli', 'xss', 'rce']
@@ -90,11 +92,10 @@ class PoolFuzzTest(DesignateV2Test):
         test_model.ns_records = [{"hostname": payload,
                                  "priority": x["priority"]}
                                  for x in test_model.ns_records]
-        result, exception = fuzzer.verify_exception(
+        result = fuzzer.verify_tempest_exception(
             self.client.post_pool, fuzz_type, test_model)
-        self.assertTrue(result)
-        if exception:
-            self.assertEqual(exception.resp.status, 400)
+        self.assertTrue(result['status'])
+        self.assertEqual(result['resp'].status, 400)
 
     @utils.parameterized(fuzzer.get_datasets(
         ['number', 'junk', 'sqli', 'xss', 'rce']
@@ -104,11 +105,10 @@ class PoolFuzzTest(DesignateV2Test):
         test_model.ns_records = [{"hostname": x["hostname"],
                                  "priority": payload}
                                  for x in test_model.ns_records]
-        result, exception = fuzzer.verify_exception(
+        result = fuzzer.verify_tempest_exception(
             self.client.post_pool, fuzz_type, test_model)
-        self.assertTrue(result)
-        if exception:
-            self.assertEqual(exception.resp.status, 400)
+        self.assertTrue(result['status'])
+        self.assertEqual(result['resp'].status, 400)
 
     @utils.parameterized(fuzzer.get_param_datasets(
         ['accept', 'content-type'],
@@ -117,12 +117,11 @@ class PoolFuzzTest(DesignateV2Test):
     def test_update_pool_fuzz_header(self, parameter, fuzz_type, payload):
         resp, test_model = self._create_pool(datagen.random_pool_data())
         headers = {parameter: payload.encode('utf-8')}
-        result, exception = fuzzer.verify_exception(
+        result = fuzzer.verify_tempest_exception(
             self.client.patch_pool, fuzz_type, test_model.id, test_model,
             headers=headers)
-        self.assertTrue(result)
-        if exception:
-            self.assertNotIn(exception.resp.status, range(500, 600))
+        self.assertTrue(result['status'])
+        self.assertNotIn(result['resp'].status, range(500, 600))
 
     @utils.parameterized(fuzzer.get_param_datasets(
         pool_params, ['junk', 'sqli', 'xss', 'rce']
@@ -130,11 +129,10 @@ class PoolFuzzTest(DesignateV2Test):
     def test_update_pool_fuzz_param(self, parameter, fuzz_type, payload):
         resp, test_model = self._create_pool(datagen.random_pool_data())
         test_model.__dict__[parameter] = payload
-        result, exception = fuzzer.verify_exception(
+        result = fuzzer.verify_tempest_exception(
             self.client.patch_pool, fuzz_type, test_model.id, test_model)
-        self.assertTrue(result)
-        if exception:
-            self.assertNotIn(exception.resp.status, range(500, 600))
+        self.assertTrue(result['status'])
+        self.assertNotIn(result['resp'].status, range(500, 600))
 
     @utils.parameterized(fuzzer.get_datasets(
         ['junk', 'sqli', 'xss', 'rce']
@@ -144,11 +142,10 @@ class PoolFuzzTest(DesignateV2Test):
         test_model.ns_records = [{"hostname": payload,
                                  "priority": x["priority"]}
                                  for x in test_model.ns_records]
-        result, exception = fuzzer.verify_exception(
+        result = fuzzer.verify_tempest_exception(
             self.client.patch_pool, fuzz_type, test_model.id, test_model)
-        self.assertTrue(result)
-        if exception:
-            self.assertNotIn(exception.resp.status, range(500, 600))
+        self.assertTrue(result['status'])
+        self.assertEqual(result['resp'].status, 400)
 
     @utils.parameterized(fuzzer.get_datasets(
         ['number', 'junk', 'sqli', 'xss', 'rce']
@@ -158,11 +155,10 @@ class PoolFuzzTest(DesignateV2Test):
         test_model.ns_records = [{"hostname": x["priority"],
                                  "priority": payload}
                                  for x in test_model.ns_records]
-        result, exception = fuzzer.verify_exception(
+        result = fuzzer.verify_tempest_exception(
             self.client.patch_pool, fuzz_type, test_model.id, test_model)
-        self.assertTrue(result)
-        if exception:
-            self.assertNotIn(exception.resp.status, range(500, 600))
+        self.assertTrue(result['status'])
+        self.assertEqual(result['resp'].status, 400)
 
     @utils.parameterized(fuzzer.get_datasets(
         ['content_types', 'junk', 'sqli', 'xss', 'rce']
@@ -170,11 +166,10 @@ class PoolFuzzTest(DesignateV2Test):
     def test_get_pool_fuzz_accept_header(self, fuzz_type, payload):
         resp, test_model = self._create_pool(datagen.random_pool_data())
         headers = {"Accept": payload}
-        result, exception = fuzzer.verify_exception(
+        result = fuzzer.verify_tempest_exception(
             self.client.get_pool, fuzz_type, test_model.id, headers=headers)
-        self.assertTrue(result)
-        if exception:
-            self.assertNotIn(exception.resp.status, range(500, 600))
+        self.assertTrue(result['status'])
+        self.assertNotIn(result['resp'].status, range(500, 600))
 
     @utils.parameterized(fuzzer.get_datasets(
         ['junk', 'sqli', 'xss', 'rce']
@@ -183,18 +178,16 @@ class PoolFuzzTest(DesignateV2Test):
         if isinstance(payload, string_types):
             payload = quote_plus(payload.encode('utf-8'))
         resp, test_model = self._create_pool(datagen.random_pool_data())
-        result, exception = fuzzer.verify_exception(
+        result = fuzzer.verify_tempest_exception(
             self.client.get_pool, fuzz_type, payload)
-        self.assertTrue(result)
-        if exception:
-            self.assertEqual(exception.resp.status, 404)
+        self.assertTrue(result['status'])
+        self.assertEqual(result['resp'].status, 404)
 
     @utils.parameterized(fuzzer.get_param_datasets(
         filters, ['junk', 'sqli', 'xss', 'rce']
     ))
     def test_list_pools_fuzzed_filter(self, parameter, fuzz_type, payload):
-        result, exception = fuzzer.verify_exception(
+        result = fuzzer.verify_tempest_exception(
             self.client.list_pools, fuzz_type, filters={parameter: payload})
-        self.assertTrue(result)
-        if exception:
-            self.assertNotIn(exception.resp.status, range(500, 600))
+        self.assertTrue(result['status'])
+        self.assertNotIn(result['resp'].status, range(500, 600))
